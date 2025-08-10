@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>JS — Portfolio</title>
+
+<!-- Funnel Display (Google Fonts). If missing, fallback to sans-serif -->
+<link href="https://fonts.googleapis.com/css2?family=Funnel+Display:wght@400;700&display=swap" rel="stylesheet">
+
+<!-- Swiper CSS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css"/>
+
+<!-- Three.js + loaders (non-module builds) -->
+<script src="https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.164.1/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.164.1/examples/js/loaders/GLTFLoader.js"></script>
+
+<style>
+  :root{
+    --highlight: goldenrod;
+    --bg: #ffffff;
+    --text: #000000;
+    --muted: #666666;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0;background:var(--bg);color:var(--text);font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;}
+  /* Header */
+  header{
+    display:flex;align-items:center;justify-content:space-between;padding:1rem 1.5rem;border-bottom:3px solid var(--highlight);
+    position:sticky;top:0;background:var(--bg);z-index:40;
+  }
+  .logo{font-weight:700}
+  nav{display:flex;gap:1rem;align-items:center}
+  nav a{color:var(--text);text-decoration:none;font-weight:600}
+  /* Hamburger */
+  .hamburger{display:none;flex-direction:column;gap:4px;cursor:pointer}
+  .hamburger div{width:26px;height:3px;background:var(--text)}
+  @media (max-width:820px){
+    nav{display:none;position:absolute;top:72px;right:1rem;flex-direction:column;padding:0.75rem;border:1px solid #eee;background:var(--bg);min-width:160px}
+    nav.show{display:flex}
+    .hamburger{display:flex}
+  }
+
+  /* Sections */
+  section{padding:3.5rem 2rem;border-bottom:1px solid #f0f0f0}
+  h1,h2,h3{margin:0 0 0.6rem 0}
+  p{margin:0 0 1rem 0;color:var(--muted)}
+
+  /* Hero */
+  .hero{display:flex;gap:1.5rem;align-items:center;justify-content:space-between;flex-wrap:wrap}
+  .hero-text{flex:1;min-width:280px;font-family:'Funnel Display', sans-serif}
+  .hero-text h1{font-size:clamp(1.6rem,3.6vw,2.8rem);line-height:1.05;font-weight:700}
+  .hero-text h1 span{color:var(--highlight)}
+  .hero-text p{font-family:inherit;font-size:1rem;color:var(--muted);max-width:60ch}
+  .hero-3d{flex:1;min-width:300px;display:flex;gap:1rem;justify-content:center;flex-wrap:wrap}
+  .model-canvas{width:340px;height:300px;border-radius:8px;border:1px solid #eee;overflow:hidden;background:linear-gradient(180deg,#fafafa,#fff);display:flex;align-items:center;justify-content:center}
+
+  /* Projects */
+  .project{border:1px solid #eee;padding:1rem;border-radius:8px;margin-bottom:1rem;box-shadow:0 2px 6px rgba(0,0,0,0.02)}
+  .project h3{color:var(--highlight);margin-top:.75rem}
+  .project-meta{font-size:0.95rem;color:var(--muted)}
+  .project .swiper{width:100%;height:220px;border-radius:6px;overflow:hidden}
+  .project .swiper-slide img{width:100%;height:100%;object-fit:cover;display:block}
+
+  /* Filter buttons / archive */
+  .filter-buttons{display:flex;gap:0.5rem;margin:1rem 0;flex-wrap:wrap}
+  .filter-buttons button{border:1px solid var(--highlight);background:transparent;padding:0.35rem 0.6rem;border-radius:6px;cursor:pointer}
+  .filter-buttons button.active{background:var(--highlight);color:white}
+  .archive{display:flex;flex-wrap:wrap;gap:0.8rem;margin-top:1rem}
+  .archive-item{border:1px solid #ddd;padding:0.5rem 0.75rem;border-radius:6px;min-width:160px;flex:1 1 calc(33% - 1rem)}
+  .archive-item small{display:block;color:var(--muted);margin-top:0.2rem}
+
+  /* About grid */
+  .about-grid{display:grid;grid-template-columns:1fr 420px;gap:1.25rem;align-items:start}
+  @media (max-width:980px){ .about-grid{grid-template-columns:1fr} .hero-3d,.model-canvas{width:100%;height:260px} }
+
+  /* Contact + Typewriter keyboard */
+  form{max-width:640px;display:flex;flex-direction:column;gap:0.6rem}
+  input,textarea{padding:0.6rem;border:1px solid #ddd;border-radius:6px;font-size:1rem}
+  button[type="submit"]{background:var(--highlight);color:white;border:none;padding:0.6rem 0.9rem;border-radius:6px;font-weight:700;cursor:pointer}
+  .typewriter{margin-top:1rem;display:grid;grid-template-columns:repeat(14, 36px);gap:6px;max-width:100%;flex-wrap:wrap}
+  .key{width:36px;height:36px;border-radius:6px;border:1px solid #ddd;display:flex;align-items:center;justify-content:center;background:#fff;user-select:none;transition:background .08s, transform .06s}
+  .key.active{background:var(--highlight);color:white;transform:translateY(-2px)}
+  .snackbar{position:fixed;left:50%;transform:translateX(-50%);bottom:24px;background:#222;color:white;padding:0.5rem 0.9rem;border-radius:6px;display:none}
+
+  /* Modal */
+  #modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.65);display:none;align-items:center;justify-content:center;z-index:9999;padding:1rem}
+  #modal-card{background:white;border-radius:10px;max-width:760px;width:100%;padding:1.25rem;box-shadow:0 10px 30px rgba(0,0,0,0.2);position:relative}
+  #modal-card h3{color:var(--highlight);margin-bottom:0.5rem}
+  #modal-close{position:absolute;right:12px;top:8px;font-size:20px;cursor:pointer;color:#666}
+
+  /* small helpers */
+  .muted{color:var(--muted)}
+  .row{display:flex;gap:1rem;align-items:center}
+  .center{display:flex;align-items:center;justify-content:center}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">JS Portfolio</div>
+
+  <div class="hamburger" id="hamburger" aria-label="menu" role="button" tabindex="0">
+    <div></div><div></div><div></div>
+  </div>
+
+  <nav id="main-nav" aria-label="Main navigation">
+    <a href="#home">Home</a>
+    <a href="#projects">Projects</a>
+    <a href="#about">About</a>
+    <a href="#contact">Contact</a>
+  </nav>
+</header>
+
+<!-- HOME / HERO -->
+<section id="home" class="hero" aria-labelledby="home-heading">
+  <div class="hero-text">
+    <h1 id="home-heading"><span>Creative technology</span> meets arts and heritage</h1>
+    <p>Explore the work of JS — where museum exhibitions, historical research, and digital experiment combine into something weird and wonderful.</p>
+  </div>
+
+  <div class="hero-3d" aria-hidden="false">
+    <div class="model-canvas" id="vr-model" title="Interactive Meta Quest 3 model (drag to rotate)"></div>
+    <div class="model-canvas" id="nefertiti-model" title="Interactive 3D print of Queen Nefertiti (drag to rotate)"></div>
+  </div>
+</section>
+
+<!-- PROJECTS -->
+<section id="projects" aria-labelledby="projects-heading">
+  <h2 id="projects-heading">Projects</h2>
+
+  <div id="project-list">
+    <!-- 10 Example Projects (replace images and text) -->
+    <!-- We'll generate the markup in JS for brevity; but include one example for noscript -->
+    <noscript>
+      <div class="project">
+        <div class="swiper">
+          <div class="swiper-wrapper">
+            <div class="swiper-slide"><img src="img/project1-1.jpg" alt="Project 1 photo 1"></div>
+            <div class="swiper-slide"><img src="img/project1-2.jpg" alt="Project 1 photo 2"></div>
+          </div>
+          <div class="swiper-pagination"></div>
+        </div>
+        <h3>Project 1 — Museum VR</h3>
+        <div class="project-meta"><strong>Role/Technique:</strong> XR, exhibit design — <strong>Job:</strong> Lead</div>
+        <a href="#" class="learn-more" data-title="Project 1 — Museum VR" data-body="Longer description about Project 1...">Learn More</a>
+      </div>
+    </noscript>
+  </div>
+
+  <!-- Archive filters -->
+  <div class="filter-buttons" id="filter-buttons" aria-label="Archive filters">
+    <button data-tag="all" class="active">All</button>
+    <button data-tag="museum">Museum</button>
+    <button data-tag="digital">Digital</button>
+    <button data-tag="research">Research</button>
+    <button data-tag="print">3D Print</button>
+  </div>
+
+  <div class="archive" id="archive">
+    <!-- sample archive items - replace/add as needed -->
+    <div class="archive-item" data-tags="museum,digital">Museum VR — 2023 <small class="muted">museum, digital</small></div>
+    <div class="archive-item" data-tags="research">Historical Research — 2022 <small class="muted">research</small></div>
+    <div class="archive-item" data-tags="print">Nefertiti Print — 2024 <small class="muted">3D print</small></div>
+    <div class="archive-item" data-tags="digital">Web Experiment — 2021 <small class="muted">digital</small></div>
+  </div>
+</section>
+
+<!-- ABOUT -->
+<section id="about" aria-labelledby="about-heading">
+  <h2 id="about-heading">About</h2>
+  <div class="about-grid">
+    <div>
+      <h3>Introduction</h3>
+      <p class="muted">[Short introduction — replace this text with your personal introduction about JS]</p>
+
+      <h3>Career Overview</h3>
+      <p class="muted">[Brief career overview — museums, exhibitions, research — replace with full details]</p>
+
+      <h3>Motivation</h3>
+      <p class="muted">[Why you do this work — archaeology, heritage, playful computation]</p>
+    </div>
+
+    <div>
+      <div style="border:1px solid #eee;padding:0.6rem;border-radius:8px;margin-bottom:0.8rem">
+        <strong>Trowel (interactive)</strong>
+        <div id="trowel-model" class="model-canvas" style="margin-top:0.6rem"></div>
+      </div>
+
+      <div style="border:1px solid #eee;padding:0.6rem;border-radius:8px">
+        <strong>Harris Matrix (interactive)</strong>
+        <div id="harris-matrix" class="model-canvas" style="margin-top:0.6rem"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CONTACT -->
+<section id="contact" aria-labelledby="contact-heading">
+  <h2 id="contact-heading">Contact</h2>
+
+  <form id="contact-form" autocomplete="on" aria-label="Contact form">
+    <input id="name" name="name" type="text" placeholder="Your name" required />
+    <input id="email" name="email" type="email" placeholder="Your email" required />
+    <textarea id="message" name="message" rows="6" placeholder="Your message" required></textarea>
+    <div style="display:flex;gap:0.6rem;align-items:center">
+      <button type="submit">Send</button>
+      <div style="color:var(--muted);font-size:0.92rem">We will never share your details.</div>
+    </div>
+  </form>
+
+  <div class="typewriter" id="typewriter-keys" aria-hidden="false" title="Interactive typewriter keyboard">
+    <!-- keys are built with JS -->
+  </div>
+</section>
+
+<!-- Modal overlay -->
+<div id="modal-overlay" role="dialog" aria-modal="true" aria-hidden="true">
+  <div id="modal-card" role="document" aria-labelledby="modal-title">
+    <div id="modal-close" aria-label="Close modal" role="button" tabindex="0">&times;</div>
+    <h3 id="modal-title">Title</h3>
+    <div id="modal-body" style="color:var(--muted);line-height:1.5"></div>
+  </div>
+</div>
+
+<!-- Snackbar for form success -->
+<div class="snackbar" id="snackbar">Message sent — thanks!</div>
+
+<!-- Swiper JS -->
+<script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+
+<script>
+/* ---------------------------
+   Utility & Initialization
+   --------------------------- */
+
+const $ = (sel, ctx=document) => ctx.querySelector(sel);
+const $$ = (sel, ctx=document) => Array.from(ctx.querySelectorAll(sel));
+
+/* Hamburger toggling */
+const hamburger = document.getElementById('hamburger');
+const mainNav = document.getElementById('main-nav');
+hamburger.addEventListener('click', () => mainNav.classList.toggle('show'));
+
+/* Simple focus outline for keyboard users on hamburger */
+hamburger.addEventListener('keydown', e => { if(e.key === 'Enter' || e.key === ' ') { e.preventDefault(); mainNav.classList.toggle('show'); } });
+
+/* ---------------------------
+   Projects markup generation
+   --------------------------- */
+/* Create 10 example projects dynamically. Replace with real content/images. */
+const projectList = document.getElementById('project-list');
+
+const projectData = [];
+for(let i=1;i<=10;i++){
+  projectData.push({
+    id: i,
+    title: `Project ${i} — Example Title`,
+    role: i % 2 === 0 ? 'Digital, XR' : 'Museum, Research',
+    job: i % 3 === 0 ? 'Collaborator' : 'Lead',
+    images: [`img/project${i}-1.jpg`,`img/project${i}-2.jpg`],
+    body: `Detailed description for Project ${i}. Replace this text with the actual project summary, methods, credits, dates, and links.`
+  });
+}
+
+function createProjectCard(p){
+  const wrapper = document.createElement('div');
+  wrapper.className = 'project';
+  wrapper.id = `project-${p.id}`;
+
+  // Swiper container
+  const swiperEl = document.createElement('div');
+  swiperEl.className = 'swiper';
+  const w = document.createElement('div'); w.className = 'swiper-wrapper';
+  p.images.forEach(src => {
+    const slide = document.createElement('div'); slide.className = 'swiper-slide';
+    const img = document.createElement('img'); img.src = src; img.alt = `${p.title} image`;
+    slide.appendChild(img); w.appendChild(slide);
+  });
+  swiperEl.appendChild(w);
+  const pag = document.createElement('div'); pag.className = 'swiper-pagination';
+  swiperEl.appendChild(pag);
+  wrapper.appendChild(swiperEl);
+
+  // meta
+  const h3 = document.createElement('h3'); h3.textContent = p.title;
+  wrapper.appendChild(h3);
+  const meta = document.createElement('div'); meta.className = 'project-meta';
+  meta.innerHTML = `<strong>Role/Technique:</strong> ${p.role} — <strong>Job:</strong> ${p.job}`;
+  wrapper.appendChild(meta);
+
+  // learn more link
+  const learn = document.createElement('a'); learn.href = '#'; learn.className = 'learn-more';
+  learn.textContent = 'Learn More';
+  learn.dataset.title = p.title;
+  learn.dataset.body = p.body;
+  learn.addEventListener('click', (ev) => {
+    ev.preventDefault();
+    openModal(learn.dataset.title, learn.dataset.body);
+  });
+  wrapper.appendChild(learn);
+
+  return wrapper;
+}
+
+/* Append project cards and init Swiper for each */
+projectData.forEach(p => {
+  projectList.appendChild(createProjectCard(p));
+});
+
+/* After DOM images created, init Swiper on each project swiper */
+function initAllSwipers(){
+  // Create an independent swiper per .project > .swiper
+  $$('.project .swiper').forEach((el, i) => {
+    // eslint-disable-next-line no-unused-vars
+    const s = new Swiper(el, {
+      pagination: { el: el.querySelector('.swiper-pagination'), clickable:true },
+      loop: true,
+      autoplay: false,
+      effect: 'slide'
+    });
+  });
+}
+window.addEventListener('load', initAllSwipers);
+
+/* ---------------------------
+   Modal
+   --------------------------- */
+const modalOverlay = document.getElementById('modal-overlay');
+const modalTitle = document.getElementById('modal-title');
+const modalBody = document.getElementById('modal-body');
+const modalClose = document.getElementById('modal-close');
+
+function openModal(title, body){
+  modalTitle.textContent = title;
+  modalBody.textContent = body;
+  modalOverlay.style.display = 'flex';
+  modalOverlay.setAttribute('aria-hidden','false');
+  modalClose.focus();
+}
+function closeModal(){
+  modalOverlay.style.display = 'none';
+  modalOverlay.setAttribute('aria-hidden','true');
+}
+modalClose.addEventListener('click', closeModal);
+modalClose.addEventListener('keydown', e => { if(e.key==='Enter' || e.key===' ') closeModal(); });
+modalOverlay.addEventListener('click', (e) => { if(e.target === modalOverlay) closeModal(); });
+document.addEventListener('keydown', e => { if(e.key === 'Escape') closeModal(); });
+
+/* ---------------------------
+   Archive filter (multi-select)
+   --------------------------- */
+const filterButtons = document.getElementById('filter-buttons');
+const archive = document.getElementById('archive');
+let activeTags = new Set(['all']); // 'all' means show everything
+
+filterButtons.addEventListener('click', (ev) => {
+  const btn = ev.target.closest('button');
+  if(!btn) return;
+  const tag = btn.dataset.tag;
+  if(tag === 'all'){
+    // clear others
+    activeTags.clear();
+    activeTags.add('all');
+    // UI
+    $$('.filter-buttons button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  } else {
+    // toggle
+    if(activeTags.has('all')) activeTags.delete('all');
+    if(activeTags.has(tag)) activeTags.delete(tag);
+    else activeTags.add(tag);
+    // UI: update active states
+    $$('.filter-buttons button').forEach(b => {
+      if(b.dataset.tag === 'all') b.classList.toggle('active', activeTags.size === 0 || activeTags.has('all'));
+      else b.classList.toggle('active', activeTags.has(b.dataset.tag));
+    });
+    // if none selected -> treat as 'all'
+    if(activeTags.size === 0) activeTags.add('all');
+  }
+  // apply filter
+  applyArchiveFilter();
+});
+
+function applyArchiveFilter(){
+  const items = $$('.archive-item');
+  items.forEach(it => {
+    const tags = it.dataset.tags ? it.dataset.tags.split(',') : [];
+    if(activeTags.has('all')){
+      it.style.display = '';
+      return;
+    }
+    // show if any intersection
+    const show = Array.from(activeTags).some(t => tags.includes(t));
+    it.style.display = show ? '' : 'none';
+  });
+}
+
+/* ---------------------------
+   3D Model loaders (three.js GLTFLoader)
+   --------------------------- */
+function initGLTFViewport(containerId, modelPath, initialZ=2.6){
+  const container = document.getElementById(containerId);
+  if(!container) return;
+  // create renderer
+  const width = container.clientWidth || 340;
+  const height = container.clientHeight || 300;
+  const renderer = new THREE.WebGLRenderer({ antialias:true, alpha:true });
+  renderer.setSize(width, height);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  container.appendChild(renderer.domElement);
+
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(45, width/height, 0.1, 1000);
+  camera.position.set(0,0,initialZ);
+
+  const ambient = new THREE.AmbientLight(0xffffff, 1.0);
+  scene.add(ambient);
+  const dir = new THREE.DirectionalLight(0xffffff, 0.6);
+  dir.position.set(5,10,7);
+  scene.add(dir);
+
+  // orbit controls
+  const controls = new THREE.OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.15;
+  controls.enablePan = false;
+
+  // load model (if present)
+  const loader = new THREE.GLTFLoader();
+  loader.load(
+    modelPath,
+    gltf => {
+      // center and scale model to fit
+      const obj = gltf.scene || gltf.scenes[0];
+      scene.add(obj);
+      // try to center geometry
+      const box = new THREE.Box3().setFromObject(obj);
+      const size = box.getSize(new THREE.Vector3());
+      const maxDim = Math.max(size.x, size.y, size.z);
+      if(maxDim > 0){
+        const scale = (initialZ*1.6) / maxDim;
+        obj.scale.setScalar(scale);
+      }
+      const center = box.getCenter(new THREE.Vector3());
+      obj.position.x -= center.x;
+      obj.position.y -= center.y;
+      obj.position.z -= center.z;
+    },
+    undefined,
+    err => {
+      // if the model fails to load, show a subtle placeholder text
+      container.innerHTML = '<div style="text-align:center;color:var(--muted);padding:1rem">3D model not found: ' + modelPath + '</div>';
+      console.warn('Model load error', err);
+    }
+  );
+
+  // responsive
+  function onResize(){
+    const w = container.clientWidth || 340;
+    const h = container.clientHeight || 300;
+    renderer.setSize(w, h);
+    camera.aspect = w/h;
+    camera.updateProjectionMatrix();
+  }
+  window.addEventListener('resize', onResize);
+
+  (function animate(){
+    requestAnimationFrame(animate);
+    controls.update();
+    renderer.render(scene, camera);
+  })();
+}
+
+/* Initialize viewports with placeholder model paths.
+   Replace these paths with your actual .glb filenames inside the models/ folder. */
+initGLTFViewport('vr-model', 'models/meta_quest3.glb', 2.8);
+initGLTFViewport('nefertiti-model', 'models/nefertiti.glb', 2.6);
+initGLTFViewport('trowel-model', 'models/trowel.glb', 2.2);
+initGLTFViewport('harris-matrix', 'models/harris_matrix.glb', 2.6);
+
+/* ---------------------------
+   Typewriter keyboard (contact)
+   --------------------------- */
+const typewriter = document.getElementById('typewriter-keys');
+const charset = [
+  '1','2','3','4','5','6','7','8','9','0',
+  'Q','W','E','R','T','Y','U','I','O','P',
+  'A','S','D','F','G','H','J','K','L',
+  'Z','X','C','V','B','N','M',',','.','?'
+];
+// build keys
+charset.forEach(ch => {
+  const key = document.createElement('div');
+  key.className = 'key';
+  key.dataset.key = ch;
+  key.textContent = ch;
+  typewriter.appendChild(key);
+});
+function highlightKey(character){
+  if(!character) return;
+  const ch = character.toUpperCase();
+  const keys = $$(`.key`);
+  keys.forEach(k => {
+    if(k.dataset.key === ch) {
+      k.classList.add('active');
+      setTimeout(()=>k.classList.remove('active'), 160);
+    }
+  });
+}
+
+/* highlight keys as user types into message textarea */
+const messageArea = document.getElementById('message');
+messageArea.addEventListener('input', (ev) => {
+  // ev.data is last inserted character for input events, but could be null on deletion
+  // highlight the last character in the value if any; fallback to ev.data.
+  const val = messageArea.value;
+  const lastChar = val.length ? val[val.length - 1] : ev.data || '';
+  // highlight letter if present in charset
+  highlightKey(lastChar);
+});
+
+/* Also highlight keys for paste events (iterate through pasted text) */
+messageArea.addEventListener('paste', (ev) => {
+  const text = (ev.clipboardData || window.clipboardData).getData('text') || '';
+  let i = 0;
+  function step(){
+    if(i >= text.length) return;
+    highlightKey(text[i]);
+    i++;
+    setTimeout(step, 80);
+  }
+  step();
+});
+
+/* ---------------------------
+   Contact form handling
+   --------------------------- */
+const contactForm = document.getElementById('contact-form');
+const snackbar = document.getElementById('snackbar');
+contactForm.addEventListener('submit', (ev) => {
+  ev.preventDefault();
+  // Basic form validation already handled by required attributes
+  // Show a "sent" snackbar and clear message (in production hook to email endpoint)
+  snackbar.style.display = 'block';
+  setTimeout(()=> snackbar.style.display = 'none', 2400);
+  // clear message text but keep name/email
+  messageArea.value = '';
+});
+
+/* ---------------------------
+   Small accessibility & progressive fallback tweaks
+   --------------------------- */
+/* Add event delegation to any .learn-more anchors (covers noscript case) */
+document.addEventListener('click', (ev) => {
+  const a = ev.target.closest('a.learn-more');
+  if(a){
+    ev.preventDefault();
+    openModal(a.dataset.title || 'Project', a.dataset.body || 'Details coming soon');
+  }
+});
+
+/* Helpful: if JS disabled, ensure nav visible */
+document.documentElement.classList.remove('no-js');
+</script>
+</body>
+</html>
